@@ -22,7 +22,9 @@ namespace EmployeesDB
             NewAddress(newAddress, lastName);*/
             
             //AuditOfProjects();
-            DossierOnEmployee(int.Parse(Console.ReadLine() ?? string.Empty));
+            //DossierOnEmployee(int.Parse(Console.ReadLine() ?? string.Empty));
+            
+            SmallDepartments(int.Parse(Console.ReadLine() ?? string.Empty));
         }
         static string GetEmployeesInformation()
         {
@@ -134,6 +136,22 @@ namespace EmployeesDB
             }
         }
         
-        
+        /// <summary>
+        /// Выводит названия отделов, где менее N сотрудников
+        /// </summary>
+        static void SmallDepartments(int n) {
+            var res = _context.Employees.GroupBy(e => e.DepartmentId)
+                .Select(e => new {
+                    Count = e.Count(),
+                    Key = e.Key
+                }).ToList();
+            
+            foreach (var v in res) {
+                if (v.Count < n) {
+                    var dept = _context.Departments.SingleOrDefault(e => e.DepartmentId == v.Key)?.Name;
+                    Console.WriteLine($"Dep. {dept} - {v.Count} employees");
+                }
+            }
+        }
     }
 }
