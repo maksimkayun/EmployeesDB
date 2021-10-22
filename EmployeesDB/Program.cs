@@ -206,8 +206,11 @@ namespace EmployeesDB
         static void DeleteCity(string name) {
             var town = _context.Towns.SingleOrDefault(e => e.Name.Equals(name));
             int? nullable = null;
-            var address = _context.Addresses.SingleOrDefault(e => e.TownId == town.TownId);
-            address.TownId = nullable;
+            var addresses = _context.Addresses.Where(e => e.TownId == town.TownId).Select(e => e).ToList();
+            foreach (var address in addresses) {
+                address.TownId = nullable;
+            }
+           
             _context.Towns.Remove(town ?? throw new InvalidOperationException());
             _context.SaveChanges();
         }
