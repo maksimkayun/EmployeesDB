@@ -24,8 +24,17 @@ namespace EmployeesDB
             //AuditOfProjects();
             //DossierOnEmployee(int.Parse(Console.ReadLine() ?? string.Empty));
             
-            SmallDepartments(int.Parse(Console.ReadLine() ?? string.Empty));
+            //SmallDepartments(int.Parse(Console.ReadLine() ?? string.Empty));
+            //SalaryIncrease(Console.ReadLine(), int.Parse(Console.ReadLine() ?? string.Empty));
+            
+            //DeleteDepartment(int.Parse(Console.ReadLine() ?? string.Empty));
+            DeleteCity(Console.ReadLine());
         }
+        
+        /// <summary>
+        /// Выводит всю информацию о работниках
+        /// </summary>
+        /// <returns></returns>
         static string GetEmployeesInformation()
         {
             var employees = _context.Employees
@@ -152,6 +161,55 @@ namespace EmployeesDB
                     Console.WriteLine($"Dep. {dept} - {v.Count} employees");
                 }
             }
+        }
+        
+        /// <summary>
+        ///  Метод, который увеличивает зарплату отделу department на percent %.
+        /// </summary>
+        /// <param name="department"></param>
+        /// <param name="percent"></param>
+        static void SalaryIncrease(string department, int percent) {
+            //var deptId = _context.Departments.SingleOrDefault(e => e.Name.Equals(department))?.DepartmentId;
+            var employees = _context.Employees.Where(e => e.Department.Name.Equals(department))
+                .Select(e => e).ToList();
+            foreach (var v in employees) {
+                v.Salary += v.Salary * (decimal) (percent / 100.0);
+            }
+            _context.SaveChanges();
+        }
+        
+        /// <summary>
+        /// Метод, удаляющий отдел с заданным Id.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        static void DeleteDepartment(int id) {
+            var employees = _context.Employees.Where(e => e.DepartmentId == id)
+                .Select(e => e).ToList();
+            var dept = _context.Departments.FirstOrDefault(e => e.DepartmentId != id);
+            var deptId = dept?.DepartmentId;
+            foreach (var emp in employees) {
+                if (deptId != null) emp.DepartmentId = (int) deptId;
+                emp.ManagerId = dept?.ManagerId;
+            }
+
+            var delDept = _context.Departments.SingleOrDefault(e => e.DepartmentId == id);
+            _context.Departments.Remove(delDept ?? throw new InvalidOperationException());
+            _context.SaveChanges();
+        }
+        
+        /// <summary>
+        /// Метод, удаляющий город с заданным названием.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        static void DeleteCity(string name) {
+            var town = _context.Towns.SingleOrDefault(e => e.Name.Equals(name));
+            int? nullable = null;
+            var address = _context.Addresses.SingleOrDefault(e => e.TownId == town.TownId);
+            address.TownId = nullable;
+            _context.Towns.Remove(town ?? throw new InvalidOperationException());
+            _context.SaveChanges();
         }
     }
 }
