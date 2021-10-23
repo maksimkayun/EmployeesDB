@@ -1,18 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using EmployeesDB.Data.Models;
 
 namespace EmployeesDB
 {
-    class Program
+    public class LinqInSQLStyle
     {
         private static EmployeesContext _context = new EmployeesContext();
-
-        static void Main(string[] args)
-        {
+        
+        /// <summary>
+        /// Начало выполнения команд LINQ в стиле SQL
+        /// </summary>
+        public static void Start() {
             //Console.WriteLine(GetEmployeesInformation());
-            //EmployeesBySalary(Convert.ToInt32(Console.ReadLine()));
+            //EmployeesBySalary(int.Parse(Console.ReadLine() ?? string.Empty));
             
             /*Console.Write("New address: ");
             var newAddress = Console.ReadLine();
@@ -21,39 +24,33 @@ namespace EmployeesDB
             NewAddress(newAddress, lastName);*/
             
             //AuditOfProjects();
-            //DossierOnEmployee(int.Parse(Console.ReadLine() ?? string.Empty));
+            //DossierOnEmployee(int.Parse(Console.ReadLine() ?? throw new InvalidOperationException()));
+            //SmallDepartments(int.Parse(Console.ReadLine() ?? throw new InvalidOperationException()));
             
-            //SmallDepartments(int.Parse(Console.ReadLine() ?? string.Empty));
             //SalaryIncrease(Console.ReadLine(), int.Parse(Console.ReadLine() ?? string.Empty));
-            
-            //DeleteDepartment(int.Parse(Console.ReadLine() ?? string.Empty));
-            //DeleteCity(Console.ReadLine());
-            
-            LinqInSQLStyle.Start();
+            //DeleteDepartment(int.Parse(Console.ReadLine() ?? throw new InvalidOperationException()));
+            DeleteCity(Console.ReadLine());
         }
         
         /// <summary>
         /// Выводит всю информацию о работниках
         /// </summary>
         /// <returns></returns>
-        static string GetEmployeesInformation()
-        {
-            var employees = _context.Employees
-                .OrderBy(e => e.EmployeeId)
-                .Select(e => new
-                {
+        static string GetEmployeesInformation() {
+            var employees = (from e in _context.Employees
+                orderby e.EmployeeId
+                select new {
                     e.FirstName,
-                    e.LastName,
                     e.MiddleName,
+                    e.LastName,
                     e.JobTitle
-                })
-                .ToList();
-            var sb = new StringBuilder();
-            foreach (var e in employees)
-            {
-                sb.AppendLine($"{e.FirstName} {e.LastName} {e.MiddleName} {e.JobTitle}");
+                }).ToList();
+            var output = new StringBuilder();
+            foreach (var e in employees) {
+                output.AppendLine($"{e.FirstName} {e.MiddleName} {e.LastName} {e.JobTitle}");
             }
-            return sb.ToString().TrimEnd();
+
+            return output.ToString().TrimEnd();
         }
         
         /// <summary>
@@ -62,8 +59,10 @@ namespace EmployeesDB
         /// </summary>
         /// <param name="sum"></param>
         static void EmployeesBySalary(int sum) {
-            var result = _context.Employees.Where(e => e.Salary > sum)
-                .OrderBy(e => e.LastName).Select(e => e);
+            var result = from e in _context.Employees
+                orderby e.LastName
+                where e.Salary > sum
+                select e;
             int i = 1;
             foreach (var e in result) {
                 Console.WriteLine($"{i++}. {e.FirstName} {e.LastName} Salary: {e.Salary}");
@@ -83,18 +82,19 @@ namespace EmployeesDB
             _context.Addresses.Add(address);
             _context.SaveChanges();
 
-            var addressId = 
-                _context.Addresses.SingleOrDefault(e => e.AddressText.Equals(newAddress))?.AddressId;
+            var addressId = (from ad in _context.Addresses
+                where ad.AddressText.Equals(newAddress)
+                select ad.AddressId)?.SingleOrDefault();
 
-            var employees = _context.Employees
-                .Where(e => e.LastName.Equals(lastName)).Select(e => e).ToList();
+            var employees = (from e in _context.Employees 
+                where e.LastName.Equals(lastName) select e).ToList();
+            
             foreach (var v in employees) {
                 v.AddressId = addressId;
             }
             _context.SaveChanges();
-            
-            var res = _context.Employees
-                .Where(e => e.LastName.Equals(lastName)).Select(e => e);
+
+            var res = from e in _context.Employees where e.LastName.Equals(lastName) select e;
             int i = 1;
             foreach (var v in res) {
                 Console.WriteLine($"{i++}. {v.FirstName} {v.LastName} IDAddress: {v.AddressId}");
@@ -106,18 +106,19 @@ namespace EmployeesDB
         /// Выводит информацию о них.
         /// </summary>
         static void AuditOfProjects() {
-            var projects = _context.Projects
-                .Where(e => e.StartDate.Year >= 2002 && e.StartDate.Year <= 2005).Select(e => e).ToList();
-            var employees = _context.Employees.ToList();
-            foreach (var p in projects) {
-                employees = _context.EmployeesProjects
-                    .Where(e => e.ProjectId == p.ProjectId).Select(e => e.Employee).Take(5).ToList();
-                
-            }
+            var projects = (from p in _context.Projects 
+                where p.StartDate.Year >= 2002 && p.StartDate.Year <= 2005 select p).ToList();
 
+            List<Employee> employees = _context.Employees.ToList();
+            foreach (var p in projects) {
+                employees = (from emp in _context.EmployeesProjects
+                    where emp.ProjectId == p.ProjectId
+                    select emp.Employee).Take(5).ToList();
+            }
+            
             int i = 0;
             foreach (var employee in employees) {
-                Console.WriteLine($"Работник: {employee.FirstName} {employee.LastName}. " +
+                Console.WriteLine($"{i + 1}. Работник: {employee.FirstName} {employee.LastName}. " +
                                   $"Менеджер: {employee.Manager.FirstName} {employee.Manager.LastName}");
                 if (projects[i].EndDate != null) {
                     Console.WriteLine($"Проект: {projects[i].Name}. Дата начала: {projects[i].StartDate}." +
@@ -136,13 +137,15 @@ namespace EmployeesDB
         /// </summary>
         /// <param name="id"></param>
         static void DossierOnEmployee(int id) {
-            var employee = _context.Employees.SingleOrDefault(e => e.EmployeeId == id);
+            var employee = (from e in _context.Employees where e.EmployeeId == id select e).SingleOrDefault();
             Console.WriteLine($"{employee?.FirstName} {employee?.LastName} - {employee?.JobTitle}");
 
-            var projects = _context.EmployeesProjects.Where(e => e.EmployeeId == employee.EmployeeId)
-                .Select(e => e.Project).ToList();
+            var projects = (from p in _context.EmployeesProjects
+                where p.EmployeeId == employee.EmployeeId
+                select p.Project.Name).ToList();
+            
             foreach (var project in projects) {
-                Console.WriteLine($"{project.Name}");
+                Console.WriteLine($"{project}");
             }
         }
         
@@ -150,15 +153,18 @@ namespace EmployeesDB
         /// Выводит названия отделов, где менее N сотрудников
         /// </summary>
         static void SmallDepartments(int n) {
-            var res = _context.Employees.GroupBy(e => e.DepartmentId)
-                .Select(e => new {
-                    Count = e.Count(),
-                    Key = e.Key
+            var res = (from employee in _context.Employees
+                group employee by employee.DepartmentId
+                into employeeGroup
+                select new {
+                    Count = employeeGroup.Count(),
+                    Key = employeeGroup.Key,
                 }).ToList();
             
             foreach (var v in res) {
                 if (v.Count < n) {
-                    var dept = _context.Departments.SingleOrDefault(e => e.DepartmentId == v.Key)?.Name;
+                    var dept = (from d in _context.Departments where d.DepartmentId == v.Key select d)
+                        .SingleOrDefault()?.Name;
                     Console.WriteLine($"Dep. {dept} - {v.Count} employees");
                 }
             }
@@ -170,9 +176,9 @@ namespace EmployeesDB
         /// <param name="department"></param>
         /// <param name="percent"></param>
         static void SalaryIncrease(string department, int percent) {
-            //var deptId = _context.Departments.SingleOrDefault(e => e.Name.Equals(department))?.DepartmentId;
-            var employees = _context.Employees.Where(e => e.Department.Name.Equals(department))
-                .Select(e => e).ToList();
+            var employees = (from e in _context.Employees
+                where e.Department.Name.Equals(department)
+                select e).ToList();
             foreach (var v in employees) {
                 v.Salary += v.Salary * (decimal) (percent / 100.0);
             }
@@ -185,16 +191,22 @@ namespace EmployeesDB
         /// <param name="id"></param>
         /// <exception cref="InvalidOperationException"></exception>
         static void DeleteDepartment(int id) {
-            var employees = _context.Employees.Where(e => e.DepartmentId == id)
-                .Select(e => e).ToList();
-            var dept = _context.Departments.FirstOrDefault(e => e.DepartmentId != id);
+            // var employees = _context.Employees.Where(e => e.DepartmentId == id)
+            //     .Select(e => e).ToList();
+            var employees = 
+                (from e in _context.Employees where e.DepartmentId == id select e).ToList();
+            
+            var dept = 
+                (from d in _context.Departments where d.DepartmentId != id select d).FirstOrDefault();
+            
             var deptId = dept?.DepartmentId;
             foreach (var emp in employees) {
                 if (deptId != null) emp.DepartmentId = (int) deptId;
                 emp.ManagerId = dept?.ManagerId;
             }
 
-            var delDept = _context.Departments.SingleOrDefault(e => e.DepartmentId == id);
+            var delDept = 
+                (from d in _context.Departments where d.DepartmentId == id select d).SingleOrDefault();
             _context.Departments.Remove(delDept ?? throw new InvalidOperationException());
             _context.SaveChanges();
         }
@@ -205,11 +217,12 @@ namespace EmployeesDB
         /// <param name="name"></param>
         /// <exception cref="InvalidOperationException"></exception>
         static void DeleteCity(string name) {
-            var town = _context.Towns.SingleOrDefault(e => e.Name.Equals(name));
-            int? nullable = null;
-            var addresses = _context.Addresses.Where(e => e.TownId == town.TownId).Select(e => e).ToList();
+            var town = (from t in _context.Towns where t.Name.Equals(name) select t).SingleOrDefault();
+            
+            var addresses = 
+                (from ad in _context.Addresses where ad.TownId == town.TownId select ad).ToList();
             foreach (var address in addresses) {
-                address.TownId = nullable;
+                address.TownId = null;
             }
            
             _context.Towns.Remove(town ?? throw new InvalidOperationException());
